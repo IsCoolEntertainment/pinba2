@@ -55,6 +55,18 @@ if [ $1 = "mysqld" ]; then
 	# TODO: create default tables from scripts/default_tables.sql
 	# TODO: Use --init-file https://mariadb.com/kb/en/library/server-system-variables/#init_file
 	#       need to fix install process for that
+        mysql=( mysql --protocol=socket -uroot -hlocalhost )
+
+	echo
+	for f in /docker-entrypoint-initdb.d/*; do
+	    case "$f" in
+		*.sh)     echo "$0: running $f"; . "$f" ;;
+		*.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
+		*.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
+		*)        echo "$0: ignoring $f" ;;
+	    esac
+	    echo
+        done
 
 	# terminate mysql server to start it in foreground
 	if ! kill -s TERM "$pid" || ! wait "$pid"; then
